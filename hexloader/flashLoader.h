@@ -9,8 +9,8 @@
 #ifndef flashLoaderCommands_h
 #define flashLoaderCommands_h
 
-#define TX_BUFFER_SIZE 4096
-#define RX_BUFFER_SIZE 4096
+#define TX_BUFFER_SIZE 1024
+#define RX_BUFFER_SIZE 1024
 
 #define FLASH_LOADER_ACK                0x79
 #define FLASH_LOADER_NACK               0x1F
@@ -23,6 +23,12 @@
 #define FLASH_LOADER_COMMAND_ERASE      0x43
 #define FLASH_LOADER_COMMAND_EXT_ERASE  0x44
 #define FLASH_LOADER_COMMAND_WPROT      0x63
+
+
+#define ERROR_READ_TIMEOUT              -1
+#define ERROR_BAD_READ                  -2
+#define ERROR_BAD_LENGTH                -3
+
 
 
 void flashLoaderStateMachine(int fd);

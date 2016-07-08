@@ -22,7 +22,8 @@ int main(int argc, const char * argv[]) {
     int fd = -1; // File descriptor for the port
     char portName[512] = {};
     
-    strcpy(portName, "/dev/tty.usbserial-A403IF57");
+//    strcpy(portName, "/dev/tty.usbserial-A403IF57");
+    strcpy(portName, "/dev/tty.usbserial");
   
     printf("Opening serial port %s...", portName);
 
