@@ -16,6 +16,7 @@
 #include "serial.h"
 #include "flashLoader.h"
 
+#define DEBUG 1
 
 int main(int argc, const char * argv[]) {
     
@@ -24,9 +25,8 @@ int main(int argc, const char * argv[]) {
     
 //    strcpy(portName, "/dev/tty.usbserial-A403IF57");
     strcpy(portName, "/dev/tty.usbserial");
-  
-    printf("Opening serial port %s...", portName);
 
+    printf("Opening serial port %s...", portName);
     fd = openPort(portName);
     configPort(fd,57600,10);
     
@@ -37,7 +37,7 @@ int main(int argc, const char * argv[]) {
         if (flashLoaderConnect(fd))
         {
             printf("OK\n");
-            flashLoaderStateMachine(fd);
+            fetchAndPrintStatus(fd);
         }
         else
         {

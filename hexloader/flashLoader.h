@@ -23,16 +23,39 @@
 #define FLASH_LOADER_COMMAND_ERASE      0x43
 #define FLASH_LOADER_COMMAND_EXT_ERASE  0x44
 #define FLASH_LOADER_COMMAND_WPROT      0x63
+#define FLASH_LOADER_COMMAND_WUNPROT    0x73
+#define FLASH_LOADER_COMMAND_RPROT      0x82
+#define FLASH_LOADER_COMMAND_RUNPROT    0x92
 
-
+#define SUCCESS                         1
+#define ERROR                           0
 #define ERROR_READ_TIMEOUT              -1
 #define ERROR_BAD_READ                  -2
 #define ERROR_BAD_LENGTH                -3
+#define ERROR_COMMAND_FAILED            -4
 
 
+struct STM32Features_struct
+{
+    uint8_t bootLoaderVersion;
+    uint8_t getCommand:1;
+    uint8_t versionCommand:1;
+    uint8_t idCommand:1;
+    uint8_t readCommand:1;
+    uint8_t goCommand:1;
+    uint8_t writeCommand:1;
+    uint8_t eraseCommand:1;
+    uint8_t writeProtCommand:1;
+    uint8_t writeUnProtCommand:1;
+    uint8_t readProtCommand:1;
+    uint8_t readUnProtCommand:1;
+};
 
-void flashLoaderStateMachine(int fd);
-uint8_t flashLoaderConnect(int fd);
-uint8_t flashLoaderSendCommand(int fd, uint8_t command, uint8_t response);
+typedef struct STM32Features_struct STM32Features;
+
+void fetchAndPrintStatus(int fd);
+int flashLoaderConnect(int fd);
+int flashLoaderGet(int fd, STM32Features* features);
+int flashLoaderGetId(int fd, uint16_t* id);
 
 #endif /* flashLoaderCommands_h */
