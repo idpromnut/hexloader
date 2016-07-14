@@ -57,5 +57,6 @@ void fetchAndPrintStatus(int fd);
 int flashLoaderConnect(int fd);
 int flashLoaderGet(int fd, STM32Features* features);
 int flashLoaderGetId(int fd, uint16_t* id);
+int flashLoaderGo(int fd, uint32_t address);
 
 #endif /* flashLoaderCommands_h */

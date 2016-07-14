@@ -18,6 +18,7 @@ int flashLoaderSendCommand(int fd, uint8_t command, uint8_t response);
 int16_t readCharSerial(int fd, uint32_t timeout);
 void writeCharSerial(int fd, uint8_t byteToWrite, uint16_t timeout);
 ssize_t flashLoaderReadBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis);
+ssize_t flashLoaderWriteBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis);
 void printBytes(uint8_t* buffer, uint8_t length);
 
 uint8_t txBuffer[TX_BUFFER_SIZE];
@@ -35,6 +36,11 @@ void fetchAndPrintStatus(int fd)
     if (flashLoaderGetId(fd, &id))
     {
         printf("CPU ID: 0x%04X\n", id);
+    }
+    
+    if (flashLoaderGo(fd, 0x00800000))
+    {
+        printf("GO: Success\n");
     }
     
 }
@@ -128,27 +134,30 @@ int flashLoaderGetId(int fd, uint16_t* id)
 }
 
 
-int flashLoaderGetId(int fd, uint16_t* id)
+int flashLoaderGo(int fd, uint32_t address)
 {
-    uint8_t readBuffer[16];
-    ssize_t bytesRead;
+    uint8_t jumpBuffer[16];
+    uint16_t len = 0;
+    uint8_t checksum = 0;
     
-    if (flashLoaderSendCommand(fd, FLASH_LOADER_COMMAND_GET_ID, FLASH_LOADER_ACK)) {
-        bytesRead = flashLoaderReadBytes(fd, readBuffer, 16, 1000);
-        if (bytesRead == 2)
+    if (flashLoaderSendCommand(fd, FLASH_LOADER_COMMAND_GO, FLASH_LOADER_ACK)) {
+        
+        // copy and calculate checksum
+        for(; len < 4; ++len)
         {
+            jumpBuffer[len] = (uint8_t)( address >> ((3 - len) * 8) );
+            checksum ^= jumpBuffer[len];
+        }
+        jumpBuffer[++len] = checksum;
+        
 #if DEBUG
-            printf("GET_ID(): read %li bytes: ", bytesRead);
-            printBytes(readBuffer, bytesRead);
-            printf("\n");
+        printf("GO(): writing address: ");
+        printBytes(jumpBuffer, len);
+        printf("\n");
 #endif
-            *id = (readBuffer[0] << 8) | (readBuffer[1]);
-            return SUCCESS;
-        }
-        else
-        {
-            return ERROR_COMMAND_FAILED;
-        }
+        
+//        bytesWritten = flashLoaderWriteBytes(fd, jumpBuffer, len, 1000);
+        return SUCCESS;
     }
     
     return ERROR_COMMAND_FAILED;
@@ -245,6 +254,35 @@ ssize_t flashLoaderReadBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t ti
             return ERROR_BAD_READ;
         }
     }
+}
+
+
+ssize_t flashLoaderWriteBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis)
+{
+    const uint32_t loopDelay = 500;
+    ssize_t bytesWritten = 0;
+    ssize_t totalBytesWritten = 0;
+    uint32_t waitedTime = 0;
+    
+    while(totalBytesWritten < size && waitedTime < (timeoutMillis*1000))
+    {
+        bytesWritten = write(fd, (buffer + totalBytesWritten), (size - totalBytesWritten));
+        totalBytesWritten += bytesWritten;
+        if (totalBytesWritten > 0)
+        {
+            if (totalBytesWritten == size)
+            {
+                // we're done, return
+            }
+            else
+            {
+                usleep(loopDelay);
+                waitedTime += loopDelay;
+            }
+        }
+    }
+
+    return totalBytesWritten;
 }
 
 
