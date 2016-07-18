@@ -29,10 +29,10 @@
 
 #define SUCCESS                         1
 #define ERROR                           0
-#define ERROR_READ_TIMEOUT              -1
-#define ERROR_BAD_READ                  -2
-#define ERROR_BAD_LENGTH                -3
-#define ERROR_COMMAND_FAILED            -4
+#define ERROR_READ_TIMEOUT              -2
+#define ERROR_BAD_READ                  -3
+#define ERROR_BAD_LENGTH                -4
+#define ERROR_COMMAND_FAILED            -5
 
 
 struct STM32Features_struct
@@ -58,5 +58,10 @@ int flashLoaderConnect(int fd);
 int flashLoaderGet(int fd, STM32Features* features);
 int flashLoaderGetId(int fd, uint16_t* id);
 int flashLoaderGo(int fd, uint32_t address);
+int flashLoaderWriteProt(int fd);
+int flashLoaderWriteUnProt(int fd);
+int flashLoaderReadoutProt(int fd);
+int flashLoaderReadoutUnProt(int fd);
+int flashLoaderRead(int fd);
 
 #endif /* flashLoaderCommands_h */

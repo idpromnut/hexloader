@@ -26,6 +26,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		837BDCA41D3BC26E005D447C /* utilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utilities.h; sourceTree = "<group>"; };
 		94DA736B1D2586400095BAE2 /* hexloader */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hexloader; sourceTree = BUILT_PRODUCTS_DIR; };
 		94DA736E1D2586400095BAE2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		94DA73751D25867C0095BAE2 /* Crc16.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Crc16.c; sourceTree = "<group>"; };
@@ -73,6 +74,7 @@
 				94DA736E1D2586400095BAE2 /* main.c */,
 				94DA737E1D2A16640095BAE2 /* flashLoader.h */,
 				94DA737F1D2A26BD0095BAE2 /* flashLoader.c */,
+				837BDCA41D3BC26E005D447C /* utilities.h */,
 			);
 			path = hexloader;
 			sourceTree = "<group>";

@@ -34,7 +34,7 @@ int main(int argc, const char * argv[]) {
     {
         printf("OK\n");
         printf("Connecting to STM32...");
-        if (flashLoaderConnect(fd))
+        if (flashLoaderConnect(fd) == SUCCESS)
         {
             printf("OK\n");
             fetchAndPrintStatus(fd);
