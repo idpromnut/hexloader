@@ -12,6 +12,7 @@
 #define TX_BUFFER_SIZE 1024
 #define RX_BUFFER_SIZE 1024
 
+#define FLASH_LOADER_START              0x7F
 #define FLASH_LOADER_ACK                0x79
 #define FLASH_LOADER_NACK               0x1F
 #define FLASH_LOADER_COMMAND_GET        0x00

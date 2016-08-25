@@ -24,7 +24,9 @@ int main(int argc, const char * argv[]) {
     char portName[512] = {};
     
 //    strcpy(portName, "/dev/tty.usbserial-A403IF57");
-    strcpy(portName, "/dev/tty.usbserial");
+//    strcpy(portName, "/dev/tty.usbserial-FTG5I6P4");
+    strcpy(portName, "/dev/tty.usbserial-1412B");
+//    strcpy(portName, "/dev/tty.usbserial");
 
     printf("Opening serial port %s...", portName);
     fd = openPort(portName);

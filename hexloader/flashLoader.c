@@ -15,21 +15,37 @@
 #include "utilities.h"
 
 
+#define READ_TIMEOUT 100
+
+
+/* --------------------------------------------------------------------------------------------------- */
+/* -                                      FUNCTION DECLARATIONS                                      - */
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderSendCommand(int fd, uint8_t command, uint8_t response);
 int flashLoaderSendCommandWithTimeout(int fd, uint8_t command, uint8_t response, uint32_t timeout);
 int flashLoaderProtectCommand(int fd, uint8_t command);
 ssize_t flashLoaderReadBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis);
 ssize_t flashLoaderWriteBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis);
 
+ssize_t readTimeout(int fd, uint8_t* buffer, uint16_t length, uint32_t timeoutMillis);
 uint8_t readCharSerial(int fd, uint32_t timeoutMillis);
 void writeCharSerial(int fd, uint8_t byteToWrite, uint32_t timeoutMillis);
 void readDiscardBytes(int fd, ssize_t maxBytesToDiscard);
 void printBytes(uint8_t* buffer, uint8_t length);
 
-#define READ_TIMEOUT 100
 
+/* --------------------------------------------------------------------------------------------------- */
+/* -                                         MODULE VARIABLES                                        - */
+/* --------------------------------------------------------------------------------------------------- */
 uint8_t txBuffer[TX_BUFFER_SIZE];
 uint8_t rxBuffer[RX_BUFFER_SIZE];
+
+
+
+/* --------------------------------------------------------------------------------------------------- */
+/* -                                      EXPORTED FUNCTION DEFINITIONS                              - */
+/* --------------------------------------------------------------------------------------------------- */
+
 
 void fetchAndPrintStatus(int fd)
 {
@@ -48,6 +64,7 @@ void fetchAndPrintStatus(int fd)
     if (flashLoaderRead(fd) == ERROR_COMMAND_FAILED)
     {
         printf("Read out protection enabled, exiting\n");
+/*
         if (flashLoaderReadoutUnProt(fd) == SUCCESS)
         {
             printf("Read out protection disabled, flash erased\n");
@@ -56,10 +73,12 @@ void fetchAndPrintStatus(int fd)
         {
             printf("Could not disable read out protection\n");
         }
+ */
         return;
     }
     else
     {
+/*
         printf("Read out protection disabled\n");
         if (flashLoaderReadoutProt(fd) == SUCCESS)
         {
@@ -69,34 +88,30 @@ void fetchAndPrintStatus(int fd)
         {
             printf("Could not enable read out protection\n");
         }
+ */
         return;
     }
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderConnect(int fd)
 {
-    int16_t readByte;
-    uint16_t temp;
-    usleep(100);
+    uint8_t readByte;
 
     for(int i = 0; i < 5; ++i)
     {
-        writeCharSerial(fd, 0x7F, 0);
-        readByte = readCharSerial(fd, READ_TIMEOUT);
-        if (readByte != ERROR_READ_TIMEOUT)
+        usleep(500);
+        writeCharSerial(fd, FLASH_LOADER_START, 0);
+        if (readTimeout(fd, &readByte, 1, 100) == 1)
         {
-            return SUCCESS;
-        }
-        else
-        {
-            if ((uint8_t)readByte == FLASH_LOADER_ACK)
+#if DEBUG
+            printf("flashLoaderConnect(): %02X\n", readByte);
+#endif
+            
+            if (readByte == FLASH_LOADER_ACK || readByte == FLASH_LOADER_NACK)
             {
-                // attempt to execute a GET ID; if successful, this means that we are already in the flashloader
-                if (flashLoaderGetId(fd, &temp) == SUCCESS)
-                {
-                    return SUCCESS;
-                }
+                return SUCCESS;
             }
         }
     }
@@ -104,6 +119,7 @@ int flashLoaderConnect(int fd)
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderGet(int fd, STM32Features* features)
 {
     uint8_t readBuffer[128];
@@ -144,6 +160,7 @@ int flashLoaderGet(int fd, STM32Features* features)
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderGetId(int fd, uint16_t* id)
 {
     uint8_t readBuffer[16];
@@ -171,6 +188,7 @@ int flashLoaderGetId(int fd, uint16_t* id)
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderGo(int fd, uint32_t address)
 {
     uint8_t jumpBuffer[16];
@@ -210,30 +228,35 @@ int flashLoaderGo(int fd, uint32_t address)
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderWriteProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RPROT);
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderWriteUnProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RUNPROT);
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderReadoutProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RPROT);
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderReadoutUnProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RUNPROT);
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderProtectCommand(int fd, uint8_t command)
 {
     if (flashLoaderSendCommandWithTimeout(fd, command, FLASH_LOADER_ACK, 30000))
@@ -247,6 +270,7 @@ int flashLoaderProtectCommand(int fd, uint8_t command)
 }
 
 
+/* --------------------------------------------------------------------------------------------------- */
 int flashLoaderRead(int fd)
 {
     if (flashLoaderSendCommand(fd, FLASH_LOADER_COMMAND_READ_MEM, FLASH_LOADER_ACK) == ERROR_COMMAND_FAILED)
@@ -258,9 +282,10 @@ int flashLoaderRead(int fd)
 }
 
 
-/* ------------------------------------------------------------------------------------------- */
-/*                                        UTILITY FUNCTIONS                                    */
-/* ------------------------------------------------------------------------------------------- */
+
+/* --------------------------------------------------------------------------------------------------- */
+/* -                                    PRIVATE FUNCTION DEFINITIONS                                 - */
+/* --------------------------------------------------------------------------------------------------- */
 
 int flashLoaderSendCommand(int fd, uint8_t command, uint8_t response)
 {
@@ -405,6 +430,36 @@ void readDiscardBytes(int fd, ssize_t maxBytesToDiscard)
 }
 
 
+ssize_t readTimeout(int fd, uint8_t* buffer, uint16_t length, uint32_t timeoutMillis)
+{
+    const uint32_t loopDelay = 500;
+    const uint32_t timeoutUSecs = timeoutMillis * 1000;
+    ssize_t bytesRead = 0, totalBytesRead = 0;
+    long bufferFreeLength = labs((long)length - totalBytesRead);
+    uint32_t waitedTime = 0;
+    while( (bytesRead > 0)  || ( (bufferFreeLength > 0) && (waitedTime < timeoutUSecs) ) )
+    {
+        bytesRead = read(fd, &rxBuffer, MIN(long, (long)RX_BUFFER_SIZE, bufferFreeLength));
+//        if (bytesRead < 0) // encountered an error while reading
+//        {
+//            break;
+//        }
+
+        if (bytesRead > 0)
+        {
+            memcpy(buffer + totalBytesRead, rxBuffer, bytesRead);
+            totalBytesRead += bytesRead;
+            bufferFreeLength = labs((long)length - totalBytesRead);
+        }
+
+        // wait for data to come in
+        usleep(loopDelay);
+        waitedTime += loopDelay;
+    }
+    return totalBytesRead;
+}
+
+
 uint8_t readCharSerial(int fd, uint32_t timeoutMillis)
 {
     const uint32_t loopDelay = 500;
@@ -418,33 +473,6 @@ uint8_t readCharSerial(int fd, uint32_t timeoutMillis)
         waitedTime += loopDelay;
     }
     return input;
-}
-
-
-ssize_t readTimeout(int fd, uint8_t* buffer, uint16_t length, uint32_t timeoutMillis)
-{
-    const uint32_t loopDelay = 500;
-    const uint32_t timeoutUSecs = timeoutMillis * 1000;
-    ssize_t bytesRead = 0, totalBytesRead = 0;
-    long bufferFreeLength = labs((long)length - totalBytesRead);
-    uint32_t waitedTime = 0;
-    while( (bytesRead > 0)  || ( (bufferFreeLength > 0) && (waitedTime < timeoutUSecs) ) )
-    {
-        bytesRead = read(fd, &rxBuffer, MIN(long, (long)RX_BUFFER_SIZE, bufferFreeLength));
-        if (bytesRead < 0) // encountered an error while reading
-        {
-            break;
-        }
-
-        memcpy(buffer + totalBytesRead, rxBuffer, bytesRead);
-        totalBytesRead += bytesRead;
-        bufferFreeLength = labs((long)length - totalBytesRead);
-
-        // wait for data to come in
-        usleep(loopDelay);
-        waitedTime += loopDelay;
-    }
-    return totalBytesRead;
 }
 
 
