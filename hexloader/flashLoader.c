@@ -17,6 +17,10 @@
 
 #define READ_TIMEOUT 100
 
+/* --------------------------------------------------------------------------------------------------- */
+/* -                                          DECLARATIONS                                           - */
+/* --------------------------------------------------------------------------------------------------- */
+
 
 /* --------------------------------------------------------------------------------------------------- */
 /* -                                      FUNCTION DECLARATIONS                                      - */
@@ -27,6 +31,7 @@ int flashLoaderProtectCommand(int fd, uint8_t command);
 ssize_t flashLoaderReadBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis);
 ssize_t flashLoaderWriteBytes(int fd, uint8_t* buffer, uint16_t size, uint32_t timeoutMillis);
 
+void resetFlashLoaderStateMachine(int fd);
 ssize_t readTimeout(int fd, uint8_t* buffer, uint16_t length, uint32_t timeoutMillis);
 uint8_t readCharSerial(int fd, uint32_t timeoutMillis);
 void writeCharSerial(int fd, uint8_t byteToWrite, uint32_t timeoutMillis);
@@ -50,9 +55,14 @@ uint8_t rxBuffer[RX_BUFFER_SIZE];
 void fetchAndPrintStatus(int fd)
 {
     STM32Features features;
-    if (flashLoaderGet(fd, &features))
+    if (flashLoaderGet(fd, &features) == SUCCESS)
     {
         printf("STM32 Flash Bootloader version:    0x%02X\n", features.bootLoaderVersion);
+    }
+    else
+    {
+        printf("STM32 Flash Bootloader version:    COMMAND FAILED\n");
+        return;
     }
     
     uint16_t id;
@@ -95,32 +105,31 @@ void fetchAndPrintStatus(int fd)
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderConnect(int fd)
+FlashLoaderResult flashLoaderConnect(int fd)
 {
     uint8_t readByte;
-
+    
+    // attempt to get into the bootloader
     for(int i = 0; i < 5; ++i)
     {
         usleep(500);
         writeCharSerial(fd, FLASH_LOADER_START, 0);
         if (readTimeout(fd, &readByte, 1, 100) == 1)
         {
-#if DEBUG
-            printf("flashLoaderConnect(): %02X\n", readByte);
-#endif
-            
-            if (readByte == FLASH_LOADER_ACK || readByte == FLASH_LOADER_NACK)
+            if (readByte == FLASH_LOADER_NACK)
             {
-                return SUCCESS;
+                resetFlashLoaderStateMachine(fd);
             }
+            return SUCCESS;
         }
     }
+
     return ERROR_COMMAND_FAILED;
 }
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderGet(int fd, STM32Features* features)
+FlashLoaderResult flashLoaderGet(int fd, STM32Features* features)
 {
     uint8_t readBuffer[128];
     ssize_t bytesRead;
@@ -153,15 +162,22 @@ int flashLoaderGet(int fd, STM32Features* features)
         }
         else
         {
+#if DEBUG
+            printf("flashLoaderGet(): read failed\n");
+#endif
             return ERROR_COMMAND_FAILED;
         }
     }
+
+#if DEBUG
+    printf("flashLoaderGet(): send failed\n");
+#endif
     return ERROR_COMMAND_FAILED;
 }
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderGetId(int fd, uint16_t* id)
+FlashLoaderResult flashLoaderGetId(int fd, uint16_t* id)
 {
     uint8_t readBuffer[16];
     ssize_t bytesRead;
@@ -189,7 +205,7 @@ int flashLoaderGetId(int fd, uint16_t* id)
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderGo(int fd, uint32_t address)
+FlashLoaderResult flashLoaderGo(int fd, uint32_t address)
 {
     uint8_t jumpBuffer[16];
     uint16_t len = 0;
@@ -229,28 +245,28 @@ int flashLoaderGo(int fd, uint32_t address)
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderWriteProt(int fd)
+FlashLoaderResult flashLoaderWriteProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RPROT);
 }
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderWriteUnProt(int fd)
+FlashLoaderResult flashLoaderWriteUnProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RUNPROT);
 }
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderReadoutProt(int fd)
+FlashLoaderResult flashLoaderReadoutProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RPROT);
 }
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderReadoutUnProt(int fd)
+FlashLoaderResult flashLoaderReadoutUnProt(int fd)
 {
     return flashLoaderProtectCommand(fd, FLASH_LOADER_COMMAND_RUNPROT);
 }
@@ -271,7 +287,7 @@ int flashLoaderProtectCommand(int fd, uint8_t command)
 
 
 /* --------------------------------------------------------------------------------------------------- */
-int flashLoaderRead(int fd)
+FlashLoaderResult flashLoaderRead(int fd)
 {
     if (flashLoaderSendCommand(fd, FLASH_LOADER_COMMAND_READ_MEM, FLASH_LOADER_ACK) == ERROR_COMMAND_FAILED)
     {
@@ -426,6 +442,17 @@ void readDiscardBytes(int fd, ssize_t maxBytesToDiscard)
         {
             return;
         }
+    }
+}
+
+
+void resetFlashLoaderStateMachine(int fd)
+{
+    uint8_t response = 0;
+    while(response != FLASH_LOADER_NACK)
+    {
+        response = readCharSerial(fd, READ_TIMEOUT);
+        writeCharSerial(fd, 0x00, READ_TIMEOUT);
     }
 }
 

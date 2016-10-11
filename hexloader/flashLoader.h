@@ -1,13 +1,15 @@
 //
-//  flashLoaderCommands.h
-//  hexloader
+//  flashLoader.h
+//  hexloader project
 //
 //  Created by Chris Matthews on 2016-07-03.
 //  Copyright © 2016 Unrecoverable.org. All rights reserved.
 //
 
-#ifndef flashLoaderCommands_h
-#define flashLoaderCommands_h
+#ifndef flashLoader_h
+#define flashLoader_h
+
+
 
 #define TX_BUFFER_SIZE 1024
 #define RX_BUFFER_SIZE 1024
@@ -28,12 +30,16 @@
 #define FLASH_LOADER_COMMAND_RPROT      0x82
 #define FLASH_LOADER_COMMAND_RUNPROT    0x92
 
-#define SUCCESS                         1
-#define ERROR                           0
-#define ERROR_READ_TIMEOUT              -2
-#define ERROR_BAD_READ                  -3
-#define ERROR_BAD_LENGTH                -4
-#define ERROR_COMMAND_FAILED            -5
+
+enum FlashLoaderResult_enum {
+    SUCCESS,
+    SUCCESS_ALREADY_CONNECTED,
+    ERROR,
+    ERROR_READ_TIMEOUT,
+    ERROR_BAD_READ,
+    ERROR_BAD_LENGTH,
+    ERROR_COMMAND_FAILED
+};
 
 
 struct STM32Features_struct
@@ -52,17 +58,18 @@ struct STM32Features_struct
     uint8_t readUnProtCommand:1;
 };
 
+typedef enum FlashLoaderResult_enum FlashLoaderResult;
 typedef struct STM32Features_struct STM32Features;
 
 void fetchAndPrintStatus(int fd);
-int flashLoaderConnect(int fd);
-int flashLoaderGet(int fd, STM32Features* features);
-int flashLoaderGetId(int fd, uint16_t* id);
-int flashLoaderGo(int fd, uint32_t address);
-int flashLoaderWriteProt(int fd);
-int flashLoaderWriteUnProt(int fd);
-int flashLoaderReadoutProt(int fd);
-int flashLoaderReadoutUnProt(int fd);
-int flashLoaderRead(int fd);
+FlashLoaderResult flashLoaderConnect(int fd);
+FlashLoaderResult flashLoaderGet(int fd, STM32Features* features);
+FlashLoaderResult flashLoaderGetId(int fd, uint16_t* id);
+FlashLoaderResult flashLoaderGo(int fd, uint32_t address);
+FlashLoaderResult flashLoaderWriteProt(int fd);
+FlashLoaderResult flashLoaderWriteUnProt(int fd);
+FlashLoaderResult flashLoaderReadoutProt(int fd);
+FlashLoaderResult flashLoaderReadoutUnProt(int fd);
+FlashLoaderResult flashLoaderRead(int fd);
 
-#endif /* flashLoaderCommands_h */
+#endif /* flashLoader_h */
